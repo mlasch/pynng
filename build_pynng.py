@@ -4,23 +4,9 @@
 # script should ensure that it is built before running.  It looks in this file
 # to see what the expected object file is based on the platform.
 from cffi import FFI
-import shutil
-import sys
+import build_config
 
 ffibuilder = FFI()
-
-if sys.platform == 'win32':
-    if shutil.which('ninja'):
-        objects = ['./nng/build/nng.lib']
-    else:
-        objects = ['./nng/build/Release/nng.lib']
-    # libraries determined to be necessary through trial and error
-    libraries = ['Ws2_32', 'Advapi32']
-else:
-    objects = ['./nng/build/libnng.a']
-    libraries = ['pthread']
-
-
 ffibuilder.set_source(
     "pynng._nng",
     r""" // passed to the real C compiler,
@@ -39,11 +25,11 @@ ffibuilder.set_source(
          #include <nng/protocol/survey0/respond.h>
          #include <nng/protocol/survey0/survey.h>
     """,
-    libraries=libraries,
+    libraries=build_config.libraries,
     # library_dirs=['nng/build/Debug',],
     # (more arguments like setup.py's Extension class:
-    include_dirs=['nng/include'],
-    extra_objects=objects,
+    include_dirs=build_config.includes,
+    extra_objects=build_config.objects,
 )
 
 

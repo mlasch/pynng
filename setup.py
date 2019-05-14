@@ -1,3 +1,5 @@
+import argparse
+import build_config
 import os
 import shutil
 import subprocess
@@ -16,12 +18,44 @@ THIS_DIR = os.path.dirname(__file__)
 NNG_REVISION = 'd3bd35ab49ad74528fd9e34cce9016d74dd91943'
 
 
-def build_nng_lib():
+# keep track of whether the user passed their own lib for us to link against;
+# if that's the case we don't need to build it.
+user_provided_lib = False
+
+
+def _take_user_args_for_stuff():
+    """
+    Reads sys.argv for arguments we care about, then replaces sys.argv so
+    setuptools doesn't puke.  This is a hack and I'm not proud of it.
+
+    """
+    global user_provided_lib
+    p = argparse.ArgumentParser()
+    p.add_argument('--nng-lib')
+    p.add_argument('--nng-include-dir')
+    known, unknown = p.parse_known_args()
+
+    # we either need *both* arguments passed in or *neither*.
+    if bool(known.nng_lib) != bool(known.nng_include_dir):
+        print('--nng-lib and --nng-include-dir need to either *both* be given '
+              'or *neither* given', file=sys.stderr)
+        exit(1)
+    if known.nng_lib and known.nng_include_dir:
+        build_config.objects = [known.nng_lib]
+        build_config.includes = [known.nng_include_dir]
+        user_provided_lib = True
+
+    sys.argv = [sys.argv[0]] + unknown
+
+
+_take_user_args_for_stuff()
+
+
+def _build_default_nng_lib():
     # cannot import build_pynng at the top level becuase cffi may not be
     # installed yet (since it is a dependency, and this script installs
     # dependencies).  Bootstrapping!
-    import build_pynng
-    if os.path.exists(build_pynng.objects[0]):
+    if os.path.exists(build_config.objects[0]):
         # the object file we were planning on building already exists; we'll
         # just use it!
         return
@@ -80,8 +114,18 @@ def build_nng_lib():
     subprocess.check_call(cmd, shell=needs_shell)
 
 
-# TODO: this is basically a hack to get something to run before running cffi
-# extnsion builder. subclassing something else would be better!
+def build_nng_lib():
+    """
+    This function will build the nng library if the library does not already
+    exist.  Alternatively, the user can pass the argument '--nng-lib' on the
+    command line, and the library that --nng-lib points to will be used.
+
+    """
+    if not user_provided_lib:
+        _build_default_nng_lib()
+
+
+# extension builder. subclassing something else would be better!
 class BuildPyCommand(setuptools.command.build_py.build_py):
     """Build nng library before anything else."""
     def run(self):
