@@ -13,7 +13,7 @@ exec(open("pynng/_version.py", encoding="utf-8").read())
 THIS_DIR = os.path.dirname(__file__)
 
 
-NNG_REVISION = 'd3bd35ab49ad74528fd9e34cce9016d74dd91943'
+NNG_REVISION = 'master'
 
 
 def build_nng_lib():

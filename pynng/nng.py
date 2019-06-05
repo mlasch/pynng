@@ -4,7 +4,6 @@ Provides a Pythonic interface to cffi nng bindings
 
 
 import logging
-import weakref
 import threading
 
 import pynng
@@ -34,7 +33,7 @@ Surveyor0 Respondent0
 # collected, a weak reference to the socket is stored here instead of the
 # actual socket.
 
-_live_sockets = weakref.WeakValueDictionary()
+_live_sockets = {}
 
 
 def _ensure_can_send(thing):
@@ -272,6 +271,10 @@ class Socket:
         self._pipe_notify_lock = threading.Lock()
         self._async_backend = async_backend
         self._socket = ffi.new('nng_socket *',)
+        # _close_lock ensures we don't try to remove our socket twice from
+        # _live_sockets due to racy access to self.close()
+        self._close_lock = threading.Lock()
+        self._closed = False
         if opener is not None:
             self._opener = opener
         if opener is None and not hasattr(self, '_opener'):
@@ -373,17 +376,28 @@ class Socket:
         self._listeners[l_id] = py_listener
         return py_listener
 
+    @property
+    def closed(self):
+        """
+        Returns True if the socket is closed.  Once a socket is closed, it
+        cannot be opened again.
+
+        """
+        return self._closed
+
     def close(self):
         """Close the socket, freeing all system resources."""
-        # if a TypeError occurs (e.g. a bad keyword to __init__) we don't have
-        # the attribute _socket yet.  This prevents spewing extra exceptions
-        if hasattr(self, '_socket'):
-            lib.nng_close(self.socket)
-            # cleanup the list of listeners/dialers.  A program would be likely to
-            # segfault if a user accessed the listeners or dialers after this
-            # point.
-            self._listeners = {}
-            self._dialers = {}
+        with self._close_lock:
+            # if a TypeError occurs (e.g. a bad keyword to __init__) we don't have
+            # the attribute _socket yet.  This prevents spewing extra exceptions
+            if hasattr(self, '_socket') and not self.closed:
+                lib.nng_close(self.socket)
+                # cleanup the list of listeners/dialers.  A program would be likely to
+                # segfault if a user accessed the listeners or dialers after this
+                # point.
+                self._listeners = {}
+                self._dialers = {}
+                self._closed = True
 
     def __del__(self):
         self.close()
@@ -462,6 +476,7 @@ class Socket:
         # this is only called inside the pipe callback.
         pipe_id = lib.nng_pipe_id(lib_pipe)
         pipe = Pipe(lib_pipe, self)
+        assert not self._pipes.get(pipe_id)
         self._pipes[pipe_id] = pipe
         return pipe
 
@@ -1213,9 +1228,14 @@ def _do_callbacks(pipe, callbacks):
     for cb in callbacks:
         try:
             cb(pipe)
-        except Exception:
+        except BaseException:
             msg = 'Exception raised in pre pipe connect callback {!r}'
             logger.exception(msg.format(cb))
+
+
+# list of sock_id, list of callback events
+import collections
+dbg = collections.defaultdict(list)
 
 
 @ffi.def_extern()
@@ -1224,6 +1244,7 @@ def _nng_pipe_cb(lib_pipe, event, arg):
     sock = _live_sockets[sock_id]
     # exceptions don't propagate out of this function, so if any exception is
     # raised in any of the callbacks, we just log it (using logger.exception).
+    dbg[sock_id].append(event)
     with sock._pipe_notify_lock:
         pipe_id = lib.nng_pipe_id(lib_pipe)
         if event == lib.NNG_PIPE_EV_ADD_PRE:
@@ -1237,7 +1258,11 @@ def _nng_pipe_cb(lib_pipe, event, arg):
                 # will result in a KeyError below.
                 sock._remove_pipe(lib_pipe)
         elif event == lib.NNG_PIPE_EV_ADD_POST:
-            pipe = sock._pipes[pipe_id]
+            try:
+                pipe = sock._pipes[pipe_id]
+            except BaseException:
+                import IPython; IPython.embed()
+                raise
             _do_callbacks(pipe, sock._on_post_pipe_add)
         elif event == lib.NNG_PIPE_EV_REM_POST:
             try:
@@ -1245,7 +1270,8 @@ def _nng_pipe_cb(lib_pipe, event, arg):
             except KeyError:
                 # we get here if the pipe was closed in pre_connect earlier. This
                 # is not a big deal.
-                logger.debug('Could not find pipe for socket')
+                # msg = 'Could not find pipe for socket {}'.format(sock.name)
+                logger.debug('ooooooops')
                 return
             try:
                 _do_callbacks(pipe, sock._on_post_pipe_remove)

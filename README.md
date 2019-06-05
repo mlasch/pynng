@@ -1,6 +1,8 @@
 This is pynng.
 ==============
 
+This branch is only for debugging issue #40.
+
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/codypiersall/pynng/blob/master/LICENSE.txt)
 [![PyPI Version](https://img.shields.io/pypi/v/pynng.svg)](https://pypi.org/project/pynng)
 [![Linux Status](https://img.shields.io/travis/codypiersall/pynng/master.svg?label=linux)](https://travis-ci.org/codypiersall/pynng)
