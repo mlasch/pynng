@@ -1,17 +1,29 @@
-import logging
-import pynng
+from collections import Counter
 import time
 
+import pynng
+from pynng.nng import dbg
 
-# logging.basicConfig(level=logging.DEBUG)
+
+SLEEPY = False
 
 
 addr = 'inproc:///tmp/derpderpderp'
-# addr = 'tcp://127.0.0.1:31131'
-sock = pynng.Pair0(listen=addr)
-try:
-    while True:
-        with pynng.Pair0(dial=addr, block_on_dial=False):
-            time.sleep(0)
-except KeyboardInterrupt:
-    pass
+sock = pynng.Pair0(listen=addr, name='listener')
+i = 0
+while True:
+    try:
+        i += 1
+        name = 'dialer{}'.format(i)
+        if i % 1000 == 0:
+            counter = Counter(tuple(v) for k, v in dbg.copy().items() if len(v) <= 3)
+            print('iter {} c {}'.format(i, counter))
+        with pynng.Pair0(dial=addr, block_on_dial=False, name=name):
+            # Add in some sleeping to see how things change
+            if SLEEPY:
+                time.sleep(0.001)
+            pass
+    except KeyboardInterrupt:
+        counter = Counter(tuple(v) for k, v in dbg.copy().items() if len(v) <= 3)
+        print('iter {} c {}'.format(i, counter))
+        break

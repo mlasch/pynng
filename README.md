@@ -1,7 +1,16 @@
 This is pynng.
 ==============
 
-This branch is only for debugging issue #40.
+This branch is only for debugging issue #40.  To have some fun with it, run
+`issue40.py` like so (assuming a `bash`-like shell:
+
+```bash
+python issue40.py &
+# periodically send SIGUSR1 for updates
+kill -SIGUSR1 %1
+# keep sending the signal to see what order pipe events get fired in
+kill -SIGUSR1 %1
+```
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/codypiersall/pynng/blob/master/LICENSE.txt)
 [![PyPI Version](https://img.shields.io/pypi/v/pynng.svg)](https://pypi.org/project/pynng)

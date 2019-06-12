@@ -5,6 +5,7 @@ Provides a Pythonic interface to cffi nng bindings
 
 import logging
 import threading
+import weakref
 
 import pynng
 from ._nng import ffi, lib
@@ -33,6 +34,7 @@ Surveyor0 Respondent0
 # collected, a weak reference to the socket is stored here instead of the
 # actual socket.
 
+# _live_sockets = weakref.WeakValueDictionary()
 _live_sockets = {}
 
 
@@ -1258,21 +1260,10 @@ def _nng_pipe_cb(lib_pipe, event, arg):
                 # will result in a KeyError below.
                 sock._remove_pipe(lib_pipe)
         elif event == lib.NNG_PIPE_EV_ADD_POST:
-            try:
-                pipe = sock._pipes[pipe_id]
-            except BaseException:
-                import IPython; IPython.embed()
-                raise
+            pipe = sock._pipes[pipe_id]
             _do_callbacks(pipe, sock._on_post_pipe_add)
         elif event == lib.NNG_PIPE_EV_REM_POST:
-            try:
-                pipe = sock._pipes[pipe_id]
-            except KeyError:
-                # we get here if the pipe was closed in pre_connect earlier. This
-                # is not a big deal.
-                # msg = 'Could not find pipe for socket {}'.format(sock.name)
-                logger.debug('ooooooops')
-                return
+            pipe = sock._pipes[pipe_id]
             try:
                 _do_callbacks(pipe, sock._on_post_pipe_remove)
             finally:
