@@ -612,7 +612,25 @@ class Socket:
             return msg
 
 
-class Bus0(Socket):
+class CookedSocket(Socket):
+    """
+    A cooked version of an nng socket
+
+    """
+
+
+class RawSocket(Socket):
+    """
+    A raw version of an nng socket.
+
+    Raw sockets are *much* worse than cooked sockets.  Consuming raw or
+    undercooked sockets is known to the state of California to cause vile
+    illnesses.
+
+    """
+
+
+class Bus0(CookedSocket):
     """A bus0 socket.  The Python version of `nng_bus
     <https://nanomsg.github.io/nng/man/tip/nng_bus.7>`_.
 
@@ -632,7 +650,7 @@ class Bus0(Socket):
     _opener = lib.nng_bus0_open
 
 
-class Pair0(Socket):
+class Pair0(CookedSocket):
     """A socket for bidrectional, one-to-one communication, with a single
     partner.  The Python version of `nng_pair0
     <https://nanomsg.github.io/nng/man/tip/nng_pair.7>`_.
@@ -657,7 +675,7 @@ class Pair0(Socket):
     _opener = lib.nng_pair0_open
 
 
-class Pair1(Socket):
+class Pair1(CookedSocket):
     """A socket for bidrectional communication with potentially many partners.
     The Python version of `nng_pair1
     <https://nanomsg.github.io/nng/man/tip/nng_pair.7>`_.
@@ -708,7 +726,7 @@ class Pair1(Socket):
     polyamorous = BooleanOption('pair1:polyamorous')
 
 
-class Push0(Socket):
+class Push0(CookedSocket):
     """A push0 socket.
 
     The Python version of `nng_push
@@ -731,7 +749,7 @@ class Push0(Socket):
     _opener = lib.nng_push0_open
 
 
-class Pull0(Socket):
+class Pull0(CookedSocket):
     """A pull0 socket.
 
     The Python version of `nng_pull
@@ -750,7 +768,7 @@ class Pull0(Socket):
     _opener = lib.nng_pull0_open
 
 
-class Pub0(Socket):
+class Pub0(CookedSocket):
     """A pub0 socket.
 
     The Python version of `nng_pub
@@ -769,7 +787,7 @@ class Pub0(Socket):
     _opener = lib.nng_pub0_open
 
 
-class Sub0(Socket):
+class Sub0(CookedSocket):
     """A sub0 socket.
 
     The Python version of `nng_sub
@@ -843,7 +861,7 @@ class Sub0(Socket):
         options._setopt_string(self, b'sub:unsubscribe', topic)
 
 
-class Req0(Socket):
+class Req0(CookedSocket):
     """A req0 socket.
 
     The Python version of `nng_req
@@ -882,7 +900,7 @@ class Req0(Socket):
             self.resend_time = resend_time
 
 
-class Rep0(Socket):
+class Rep0(CookedSocket):
     """A rep0 socket.
 
     The Python version of `nng_rep
@@ -909,7 +927,7 @@ class Rep0(Socket):
     _opener = lib.nng_rep0_open
 
 
-class Surveyor0(Socket):
+class Surveyor0(CookedSocket):
     """A surveyor0 socket.
 
     The Python version of `nng_surveyor
@@ -939,7 +957,7 @@ class Surveyor0(Socket):
             self.survey_time = survey_time
 
 
-class Respondent0(Socket):
+class Respondent0(CookedSocket):
     """A respondent0 socket.
 
     The Python version of `nng_respondent
@@ -958,6 +976,50 @@ class Respondent0(Socket):
 
     """
     _opener = lib.nng_respondent0_open
+
+
+class RawBus0(RawSocket):
+    _opener = lib.nng_bus0_open_raw
+
+
+class RawPair0(RawSocket):
+    _opener = lib.nng_pair0_open_raw
+
+
+class RawPair1(RawSocket):
+    _opener = lib.nng_pair1_open_raw
+
+
+class RawPush0(RawSocket):
+    _opener = lib.nng_push0_open_raw
+
+
+class RawPull0(RawSocket):
+    _opener = lib.nng_pull0_open_raw
+
+
+class RawPub0(RawSocket):
+    _opener = lib.nng_pub0_open_raw
+
+
+class RawSub0(RawSocket):
+    _opener = lib.nng_sub0_open_raw
+
+
+class RawReq0(RawSocket):
+    _opener = lib.nng_req0_open_raw
+
+
+class RawRep0(RawSocket):
+    _opener = lib.nng_rep0_open_raw
+
+
+class RawSurveyor0(RawSocket):
+    _opener = lib.nng_surveyor0_open_raw
+
+
+class RawRespondent0(RawSocket):
+    _opener = lib.nng_respondent0_open_raw
 
 
 class Dialer:
